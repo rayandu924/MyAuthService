@@ -19,6 +19,15 @@ conn = mysql.connector.connect(host=mysql_config['host'],
 
 @app.route('/')
 def index():
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM user")
+        results = cursor.fetchall()
+        cursor.close()
+        
+        return jsonify(results)
+    except Exception as e:
+        return str(e)
 
 if __name__ == '__main__':
     app.run(debug=True)

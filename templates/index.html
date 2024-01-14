@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
+    <script type="text/javascript" charset="utf-8">
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
+        socket.on('connect', function() {
+            socket.send('User has connected!');
+        });
+        socket.on('message', function(msg) {
+            console.log('Received message');
+        });
+    </script>
+</head>
+<body>
+    <h1>WebSocket Example</h1>
+</body>
+</html>

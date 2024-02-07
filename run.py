@@ -21,6 +21,8 @@ from flask_sqlalchemy import SQLAlchemy # module pour gérer la base de données
 from flask_socketio import SocketIO # module pour gérer les websockets
 from flask_socketio import send # module pour envoyer un message à tous les clients connectés
 from datetime import timedelta # module pour gérer les durées
+from werkzeug.security import generate_password_hash # module pour hacher un mot de passe
+from werkzeug.security import check_password_hash # module pour vérifier un mot de passe
 
 # ********** Initialisation de l'application **********
 
@@ -58,10 +60,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://healer:healer@localhost
 db = SQLAlchemy(app) # initialisation de l'extension SQLAlchemy
 
 # ********** Définition des modèles **********
-class Utilisateur(db.Model):
+class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), nullable=False)
-    password = db.Column(db.String(100), nullable=False)
+    password_hash = db.Column(db.String(500), nullable=False)
     
 # ********** Création des tables **********
 with app.app_context():
@@ -71,22 +73,48 @@ with app.app_context():
 
 # ********** Routes **********
 
-# Route pour obtenir un access token et un refresh token à l'aide d'un nom d'utilisateur et d'un mot de passe
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['POST']) # Route pour se connecter à l'application
 @limiter.limit("10 per minute")
 def login():
     # Récupérez les données de la requête
     data = request.get_json()
     
-    # Verifiez si le nom d'utilisateur et le mot de passe sont corrects, si ce n'est pas le cas, retournez une erreur
-    if data['username'] != 'admin' or data['password'] != 'admin':
-        return jsonify({'error': 'invalid_credentials'}), 401
+    # Recherchez l'utilisateur dans la base de données
+    user = User.query.filter_by(username=data['username']).first()
+
+    # Si l'utilisateur n'existe pas, retournez une erreur
+    if not user:
+        return jsonify({"msg": "Bad username"}), 401
+
+    # Si le mot de passe est incorrect, retournez une erreur
+    if not check_password_hash(user.password_hash, data['password']):
+        return jsonify({"msg": "Bad password"}), 401
 
     # Créez les tokens 
     access_token = create_access_token(identity=data['username'], fresh=True, additional_claims={'role': 'admin'})
     refresh_token = create_refresh_token(identity=data['username'], additional_claims={'role': 'admin'})
     
     return jsonify(access_token=access_token, refresh_token=refresh_token)
+
+@app.route('/signup', methods=['POST'])# Route pour créer un compte
+def signup():
+    data = request.get_json()
+
+    # Vérifiez si l'utilisateur existe déjà
+    if User.query.filter_by(username=data['username']).first() is not None:
+        return jsonify({'error': 'username_already_exists'}), 400
+
+    # Hachez le mot de passe
+    hashed_password = generate_password_hash(data['password'])
+
+    # Créez un nouvel utilisateur
+    new_user = User(username=data['username'], password_hash=hashed_password)
+    
+    # Ajoutez l'utilisateur à la base de données
+    db.session.add(new_user)
+    db.session.commit()
+
+    return jsonify({'message': 'user_created_successfully'}), 201
 
 @app.route('/protected', methods=['GET']) # Route protégée, accessible uniquement avec un access token valide
 @jwt_required() # l'access token dans le header Authorization est requis pour accéder à cette route
@@ -105,10 +133,6 @@ def refresh():
     new_access_token = create_access_token(identity=current_user, fresh=True, additional_claims={'role': current_user_claims['role']})
     new_refresh_token = create_refresh_token(identity=current_user, additional_claims={'role': current_user_claims['role']})
     return jsonify(access_token=new_access_token, refresh_token=new_refresh_token), 200
-
-@app.route('/')
-def index():
-    return render_template('index.html')
 
 @socketio.on('message')
 def handle_message(message):

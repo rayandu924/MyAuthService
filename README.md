@@ -1,16 +1,51 @@
-# healer-server
- 
-mon_projet_flask/
-│
-├── app/                    # Dossier contenant l'application Flask
-│   ├── __init__.py         # Initialise l'application Flask et ses extensions
-│   ├── routes.py           # Définit les routes de l'application
-│   ├── models.py           # Contient les fonctions d'interaction avec la base de données
-│   └── utils.py            # (Optionnel) Fonctions utilitaires supplémentaires
-│
-├── venv/                   # Environnement virtuel Python pour les dépendances
-│
-├── .env                    # Fichier pour les variables d'environnement
-├── config.py               # Fichier de configuration pour l'application
-├── requirements.txt        # Liste des dépendances Python
-└── run.py                  # Script pour lancer l'application
+# Development
+
+## Setup
+
+### Install Python
+
+```bash
+sudo apt-get install python3
+```
+
+### Install Pip
+
+```bash
+sudo apt-get install python3-pip
+```
+
+### Install Virtualenv
+
+```bash
+sudo pip3 install virtualenv
+```
+
+### Create Virtual Environment
+
+```bash
+virtualenv venv
+```
+
+### Activate Virtual Environment
+
+```bash
+source venv/bin/activate
+```
+
+### Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### Set Dependencies
+
+```bash
+pip freeze > requirements.txt
+```
+
+### Run Application
+
+```bash
+python app.py
+```

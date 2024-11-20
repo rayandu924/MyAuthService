@@ -6,13 +6,11 @@ from flask_bcrypt import Bcrypt
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_mail import Mail
-import redis
-import logging
 
 db = MongoEngine()
 jwt = JWTManager()
 bcrypt = Bcrypt()
-limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"])
+limiter = Limiter(key_func=get_remote_address)
 mail = Mail()
 
 try:

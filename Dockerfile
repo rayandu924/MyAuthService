@@ -1,24 +1,32 @@
 # Dockerfile
 
+# Étape 1 : Build des dépendances dans une image temporaire
+FROM python:3.9-slim-buster AS builder
+
+# Créer un utilisateur non privilégié et configurer le WORKDIR
+RUN useradd -m appuser
+USER appuser
+WORKDIR /home/appuser/app
+
+# Installer les dépendances Python
+COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install --user --no-cache-dir -r requirements.txt
+
+# Étape 2 : Construire l'image finale
 FROM python:3.9-slim-buster
 
-# Mettre à jour le système et installer les dépendances nécessaires en une seule couche
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Créer un environnement utilisateur non privilégié avant de copier les fichiers
+# Créer un utilisateur non privilégié
 RUN useradd -m appuser
 USER appuser
 
 WORKDIR /home/appuser/app
 
-# Copier uniquement les fichiers nécessaires
-COPY --chown=appuser:appuser requirements.txt ./
+# Copier les dépendances Python depuis le builder
+COPY --from=builder /home/appuser/.local /home/appuser/.local
 
-# Installer les dépendances Python
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# Mettre à jour le PATH pour inclure les paquets installés localement
+ENV PATH="/home/appuser/.local/bin:${PATH}"
 
 # Copier le reste de l'application
 COPY --chown=appuser:appuser . .
@@ -32,4 +40,4 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 5000
 
 # Commande pour démarrer l'application
-CMD ["gunicorn", "--factory", "server:create_app", "--bind", "0.0.0.0:5000", "--workers", "4"]
+CMD ["gunicorn", "server:create_app()", "--bind", "0.0.0.0:5000", "--workers", "4", "--access-logfile", "-", "--error-logfile", "-"]

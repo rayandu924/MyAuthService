@@ -2,7 +2,6 @@
 
 from marshmallow import Schema, fields, validate
 
-
 class RegisterSchema(Schema):
     username = fields.Str(
         required=True,
@@ -24,15 +23,12 @@ class RegisterSchema(Schema):
         ]
     )
 
-
 class LoginSchema(Schema):
-    username = fields.Str(required=True)
+    identifier = fields.Str(required=True)
     password = fields.Str(required=True, load_only=True)
-
 
 class RequestPasswordResetSchema(Schema):
     email = fields.Email(required=True)
-
 
 class ResetPasswordSchema(Schema):
     token = fields.Str(required=True)

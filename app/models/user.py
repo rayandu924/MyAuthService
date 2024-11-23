@@ -1,9 +1,7 @@
 # app/models/user.py
 
 from app.extensions import db, bcrypt
-from datetime import datetime
-from typing import Any
-
+from mongoengine import Q
 
 class User(db.Document):
     """
@@ -37,3 +35,13 @@ class User(db.Document):
         :return: True si le mot de passe est correct, False sinon.
         """
         return bcrypt.check_password_hash(self.password_hash, password)
+
+    @staticmethod
+    def find_by_identifier(identifier: str):
+        """
+        Trouve un utilisateur par nom d'utilisateur ou email.
+
+        :param identifier: Le nom d'utilisateur ou l'email.
+        :return: Un objet User ou None.
+        """
+        return User.objects(Q(username=identifier) | Q(email=identifier)).first()

@@ -3,41 +3,36 @@
 # Étape 1 : Build des dépendances dans une image temporaire
 FROM python:3.9-slim-buster AS builder
 
-# Créer un utilisateur non privilégié et configurer le WORKDIR
-RUN useradd -m appuser
-USER appuser
-WORKDIR /home/appuser/app
+WORKDIR /app
 
 # Installer les dépendances Python
 COPY requirements.txt .
 RUN pip install --upgrade pip && \
-    pip install --user --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt
 
 # Étape 2 : Construire l'image finale
 FROM python:3.9-slim-buster
 
-# Créer un utilisateur non privilégié
-RUN useradd -m appuser
-USER appuser
-
-WORKDIR /home/appuser/app
+WORKDIR /app
 
 # Copier les dépendances Python depuis le builder
-COPY --from=builder /home/appuser/.local /home/appuser/.local
-
-# Mettre à jour le PATH pour inclure les paquets installés localement
-ENV PATH="/home/appuser/.local/bin:${PATH}"
+COPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copier le reste de l'application
-COPY --chown=appuser:appuser . .
+COPY . .
+
+# Créer un utilisateur non privilégié
+RUN useradd -m appuser && chown -R appuser /app
+USER appuser
 
 # Variables d'environnement
-ENV FLASK_APP=server.py
+ENV FLASK_APP=app/server.py
 ENV FLASK_ENV=production
 ENV PYTHONUNBUFFERED=1
 
 # Exposer le port de l'application
 EXPOSE 5000
 
-# Commande pour démarrer l'application (mise à jour)
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--access-logfile", "-", "--error-logfile", "-", "app.server:create_app()"]
+# Commande pour démarrer l'application
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--access-logfile", "-", "--error-logfile", "-", "app.server:app"]

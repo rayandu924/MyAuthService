@@ -12,15 +12,12 @@ from marshmallow import ValidationError
 from app.extensions import limiter
 from flask_jwt_extended import (
     jwt_required,
-    get_jwt,
     get_jwt_identity,
-    create_access_token,
-    verify_jwt_in_request
+    create_access_token
 )
 
 user_bp = Blueprint('user_bp', __name__)
 user_service = UserService()
-
 
 @user_bp.route('/register', methods=['POST'])
 @limiter.limit("5 per minute")
@@ -38,7 +35,6 @@ def register():
     password = data['password']
     return user_service.register_user(username, email, password)
 
-
 @user_bp.route('/login', methods=['POST'])
 @limiter.limit("5 per minute")
 def login():
@@ -50,10 +46,9 @@ def login():
         data = LoginSchema().load(json_data)
     except ValidationError as err:
         return {'errors': err.messages}, 400
-    username = data['username']
+    identifier = data['identifier']
     password = data['password']
-    return user_service.authenticate_user(username, password)
-
+    return user_service.authenticate_user(identifier, password)
 
 @user_bp.route('/request_password_reset', methods=['POST'])
 @limiter.limit("5 per minute")
@@ -68,7 +63,6 @@ def request_password_reset():
         return {'errors': err.messages}, 400
     email = data['email']
     return user_service.request_password_reset(email)
-
 
 @user_bp.route('/reset_password', methods=['POST'])
 @limiter.limit("5 per minute")
@@ -85,7 +79,6 @@ def reset_password():
     new_password = data['password']
     return user_service.reset_password(token, new_password)
 
-
 @user_bp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
 @limiter.limit("5 per minute")
@@ -97,16 +90,14 @@ def refresh():
     new_access_token = create_access_token(identity=current_user)
     return {'access_token': new_access_token}, 200
 
-
 @user_bp.route('/logout', methods=['POST'])
-@jwt_required(verify_type=False)
+@jwt_required()
 @limiter.limit("5 per minute")
 def logout():
     """
     Endpoint pour la déconnexion de l'utilisateur.
-    Révoque les tokens d'accès et de rafraîchissement.
+    Révoque le token d'accès courant.
     """
-    jti = get_jwt()['jti']
-    token_type = get_jwt()['type']
-    user_service.revoke_token(jti, token_type)
-    return {'message': f'Déconnexion réussie du token {token_type}.'}, 200
+    jti = get_jwt_identity()
+    user_service.revoke_token(jti)
+    return {'message': 'Déconnexion réussie.'}, 200

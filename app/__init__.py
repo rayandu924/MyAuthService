@@ -9,7 +9,6 @@ from werkzeug.exceptions import HTTPException
 from app.extensions import db, jwt, bcrypt, limiter, mail
 from flask_cors import CORS
 import redis
-import logging
 from logging.handlers import RotatingFileHandler
 
 def create_app(config_class=None):
@@ -48,9 +47,8 @@ def create_app(config_class=None):
     handler.setLevel(log_level)
     formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s')
     handler.setFormatter(formatter)
-
-    # Ajout du gestionnaire à l'application Flask
     app.logger.addHandler(handler)
+    app.logger.setLevel(log_level)
 
     # Configuration de MongoEngine
     app.config['MONGODB_SETTINGS'] = {
@@ -73,43 +71,32 @@ def create_app(config_class=None):
             decode_responses=True
         )
         redis_client.ping()
-        logging.info("Connexion à Redis réussie.")
+        app.logger.info("Connexion à Redis réussie.")
     except redis.RedisError as e:
-        logging.error(f"Erreur de connexion à Redis: {e}")
+        app.logger.error(f"Erreur de connexion à Redis: {e}")
         redis_client = None
 
     # Stocker redis_client dans les extensions de l'application
-    app.extensions['redis_client'] = redis_client
+    app.redis_client = redis_client
 
     # Fonction pour vérifier si un token est révoqué
     @jwt.token_in_blocklist_loader
     def check_if_token_revoked(jwt_header, jwt_payload):
         jti = jwt_payload['jti']
-        redis_client = app.extensions.get('redis_client')
-        if redis_client:
+        if app.redis_client:
             try:
-                entry = redis_client.get(jti)
+                entry = app.redis_client.get(jti)
                 return entry == 'true'
             except Exception as e:
-                logging.error(f'Erreur lors de la vérification du token: {e}')
+                app.logger.error(f'Erreur lors de la vérification du token: {e}')
                 return True  # Considérer le token comme révoqué en cas d'erreur
         else:
-            logging.warning("Redis client non disponible. Tous les tokens sont considérés comme révoqués.")
+            app.logger.warning("Redis client non disponible. Tous les tokens sont considérés comme révoqués.")
             return True
 
     # Enregistrement des blueprints
     from app.controllers.user import user_bp
     app.register_blueprint(user_bp, url_prefix='/user')
-
-    # Configuration avancée de la journalisation (Suggestion 17)
-    log_level = app.config.get('LOG_LEVEL', 'INFO').upper()
-    logging.basicConfig(
-        level=log_level,
-        format='%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s',
-        handlers=[
-            logging.StreamHandler()
-        ]
-    )
 
     # Gestion des erreurs HTTP
     @app.errorhandler(HTTPException)
@@ -119,7 +106,7 @@ def create_app(config_class=None):
     # Gestion des autres exceptions
     @app.errorhandler(Exception)
     def handle_general_exception(e):
-        logging.exception('Une erreur est survenue:')
+        app.logger.exception('Une erreur est survenue:')
         return jsonify({'error': 'Une erreur interne est survenue.'}), 500
 
     return app

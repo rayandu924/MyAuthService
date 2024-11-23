@@ -4,9 +4,9 @@ from app.models.user import User
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
-    get_jwt_identity
+    get_jwt_identity,
+    get_jwt
 )
-
 from flask import current_app
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from app.schemas.user import UserSchema
@@ -14,12 +14,12 @@ from marshmallow import ValidationError
 import logging
 from threading import Thread
 from flask_mail import Message
-from app.extensions import mail
 from typing import Tuple, Dict, Any, Optional
 from datetime import timedelta
 from app.schemas.user import (
     ResetPasswordSchema
 )
+from mongoengine import Q
 
 class UserService:
     """
@@ -44,29 +44,29 @@ class UserService:
         user.save()
         return {'message': 'Utilisateur créé avec succès'}, 201
 
-    def authenticate_user(self, username: str, password: str) -> Tuple[Dict[str, Any], int]:
+    def authenticate_user(self, identifier: str, password: str) -> Tuple[Dict[str, Any], int]:
         """
         Authentifie un utilisateur et génère des tokens JWT.
 
-        :param username: Le nom d'utilisateur.
+        :param identifier: Le nom d'utilisateur ou l'email.
         :param password: Le mot de passe.
         :return: Un tuple contenant les tokens JWT et le code HTTP.
         """
-        user = User.objects(username=username).first()
+        user = User.find_by_identifier(identifier)
         if not user or not user.check_password(password):
-            return {'errors': 'Nom d\'utilisateur ou mot de passe incorrect.'}, 401
+            return {'errors': 'Identifiants incorrects.'}, 401
         access_token = create_access_token(identity=str(user.id))
         refresh_token = create_refresh_token(identity=str(user.id))
         return {'access_token': access_token, 'refresh_token': refresh_token}, 200
 
-    def revoke_token(self, jti: str, token_type: str) -> None:
+    def revoke_token(self, jti: str) -> None:
         """
         Révoque un token JWT en le stockant dans Redis.
 
         :param jti: L'identifiant unique du token.
-        :param token_type: Le type du token ('access' ou 'refresh').
         """
         try:
+            token_type = get_jwt().get('type', 'access')
             if token_type == 'access':
                 expires = current_app.config['JWT_ACCESS_TOKEN_EXPIRES']
             elif token_type == 'refresh':
@@ -76,23 +76,21 @@ class UserService:
 
             expires_in_seconds = int(expires.total_seconds())
 
-            redis_client = current_app.extensions.get('redis_client')
+            redis_client = current_app.redis_client
             if redis_client:
                 redis_client.set(jti, 'true', ex=expires_in_seconds)
         except Exception as e:
             logging.error(f'Erreur lors de la révocation du token: {e}')
 
-
-    # Méthode pour révoquer tous les tokens de l'utilisateur (par exemple lors de la réinitialisation du mot de passe)
     def revoke_all_tokens(self, user_id: str) -> None:
         """
         Révoque tous les tokens associés à un utilisateur.
 
         :param user_id: L'ID de l'utilisateur.
         """
-        redis_client = current_app.extensions.get('redis_client')
+        redis_client = current_app.redis_client
         if redis_client:
-            pattern = f"user_{user_id}_*"
+            pattern = f"*{user_id}*"
             keys = redis_client.keys(pattern)
             for key in keys:
                 redis_client.delete(key)
@@ -186,4 +184,5 @@ class UserService:
             return {'errors': err.messages}, 400
         user.set_password(new_password)
         user.save()
+        self.revoke_all_tokens(str(user.id))
         return {'message': 'Mot de passe réinitialisé avec succès.'}, 200

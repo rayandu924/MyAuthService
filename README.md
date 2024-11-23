@@ -1,3 +1,5 @@
+next upgrade will be one time code connexion
+
 # Development
 
 ## Setup

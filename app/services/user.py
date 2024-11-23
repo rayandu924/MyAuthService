@@ -72,20 +72,16 @@ class UserService:
             elif token_type == 'refresh':
                 expires = current_app.config['JWT_REFRESH_TOKEN_EXPIRES']
             else:
-                expires = 3600  # Valeur par défaut d'une heure
+                expires = timedelta(hours=1)
 
-            if isinstance(expires, timedelta):
-                expires = int(expires.total_seconds())
-            elif isinstance(expires, int):
-                pass
-            else:
-                expires = 3600  # Valeur par défaut d'une heure
+            expires_in_seconds = int(expires.total_seconds())
 
             redis_client = current_app.extensions.get('redis_client')
             if redis_client:
-                redis_client.set(jti, 'true', ex=expires)
+                redis_client.set(jti, 'true', ex=expires_in_seconds)
         except Exception as e:
             logging.error(f'Erreur lors de la révocation du token: {e}')
+
 
     # Méthode pour révoquer tous les tokens de l'utilisateur (par exemple lors de la réinitialisation du mot de passe)
     def revoke_all_tokens(self, user_id: str) -> None:

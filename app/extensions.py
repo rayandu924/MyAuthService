@@ -1,5 +1,7 @@
 # app/extensions.py
 
+import logging
+import redis
 from flask_mongoengine import MongoEngine
 from flask_jwt_extended import JWTManager
 from flask_bcrypt import Bcrypt
@@ -12,6 +14,7 @@ jwt = JWTManager()
 bcrypt = Bcrypt()
 limiter = Limiter(key_func=get_remote_address)
 mail = Mail()
+
 
 try:
     redis_client = redis.StrictRedis(host=redis_host, port=redis_port, db=redis_db, decode_responses=True)

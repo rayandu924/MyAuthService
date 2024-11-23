@@ -1,7 +1,7 @@
 # app/__init__.py
 
 from flask import Flask, jsonify
-from app.config import DevelopmentConfig, ProductionConfig, TestingConfig
+from .config import DevelopmentConfig, ProductionConfig, TestingConfig
 import os
 import logging
 from werkzeug.exceptions import HTTPException

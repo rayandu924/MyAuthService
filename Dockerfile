@@ -39,5 +39,5 @@ ENV PYTHONUNBUFFERED=1
 # Exposer le port de l'application
 EXPOSE 5000
 
-# Commande pour démarrer l'application
-CMD ["gunicorn", "server:create_app()", "--bind", "0.0.0.0:5000", "--workers", "4", "--access-logfile", "-", "--error-logfile", "-"]
+# Commande pour démarrer l'application (mise à jour)
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--access-logfile", "-", "--error-logfile", "-", "app.server:create_app()"]

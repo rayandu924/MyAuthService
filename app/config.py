@@ -3,8 +3,9 @@
 import os
 from dotenv import load_dotenv
 from distutils.util import strtobool
+from datetime import timedelta
 
-load_dotenv()  # Charge les variables d'environnement depuis un fichier .env
+load_dotenv()
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY')
@@ -20,7 +21,8 @@ class Config:
         raise ValueError("JWT_SECRET_KEY n'est pas défini dans les variables d'environnement.")
 
     try:
-        JWT_ACCESS_TOKEN_EXPIRES = int(os.environ.get('JWT_ACCESS_TOKEN_EXPIRES', 3600))
+        JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=int(os.environ.get('JWT_ACCESS_TOKEN_EXPIRES', 3600)))
+        JWT_REFRESH_TOKEN_EXPIRES = timedelta(seconds=int(os.environ.get('JWT_REFRESH_TOKEN_EXPIRES', 86400)))
     except ValueError:
         JWT_ACCESS_TOKEN_EXPIRES = 3600  # Valeur par défaut si la conversion échoue
 

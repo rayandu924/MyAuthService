@@ -7,7 +7,7 @@ from distutils.util import strtobool
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'vous-devriez-changer-cette-clé')
 
-    MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://mongodb:27017/yourdb')
+    MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://root:example@mongodb:27017/auth_service_db?authSource=admin')
 
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'vous-devriez-changer-cette-clé-aussi')
 
@@ -25,7 +25,7 @@ class Config:
     REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')
     REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
     REDIS_DB = int(os.environ.get('REDIS_DB', 0))
-    REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+    REDIS_URL = f"redis://redis:6379/0"
     REDIS_DECODE_RESPONSES = True  # Pour obtenir des chaînes de caractères
 
     # Configuration Mail
@@ -54,6 +54,7 @@ class ProductionConfig(Config):
 
 class TestingConfig(Config):
     TESTING = True
-    MONGO_URI = 'mongodb://mongodb:27017/testdb'
+    # Utilisation de la même base de données pour les tests
+    MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://root:example@mongodb:27017/auth_service_db?authSource=admin')
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=1)  # Expiration rapide pour les tests
     MAIL_SUPPRESS_SEND = True  # Ne pas envoyer d'emails pendant les tests

@@ -33,8 +33,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Copier le reste de l'application
 COPY . .
 
-# Créer un utilisateur non privilégié
-RUN useradd -m appuser && chown -R appuser /app
+# Create a non-privileged user and adjust ownership
+RUN useradd -m appuser && chown -R appuser /app /opt/venv
 USER appuser
 
 # Variables d'environnement

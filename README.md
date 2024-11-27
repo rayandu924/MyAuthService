@@ -51,3 +51,9 @@ pip freeze > requirements.txt
 ```bash
 python -m app.server
 ```
+
+### Run Tests
+
+```bash
+python -m unittest app.tests.user
+```

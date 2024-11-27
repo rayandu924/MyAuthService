@@ -70,7 +70,7 @@ def create_app(config_class=None):
         decode_responses=True  # Pour obtenir des chaînes de caractères
     )
     app.redis_client = redis_client
-
+    
     # Fonction pour vérifier si un token est révoqué
     @jwt.token_in_blocklist_loader
     def check_if_token_revoked(jwt_header, jwt_payload):

@@ -123,8 +123,8 @@ class UserService:
                 f"Pour réinitialiser votre mot de passe, cliquez sur le lien suivant : {reset_url}\n\n"
                 "Si vous n'avez pas demandé cette réinitialisation, veuillez ignorer cet email."
             )
-            # Envoi asynchrone de l'email
-            Thread(target=mail.send, args=(msg,)).start()
+            # Envoi asynchrone de l'email avec contexte d'application
+            Thread(target=self.send_async_email, args=(msg,)).start()
             logging.info(f'Email de réinitialisation envoyé à {email}')
         except Exception as e:
             logging.error(f'Erreur lors de l\'envoi de l\'email de réinitialisation: {e}')
@@ -157,7 +157,7 @@ class UserService:
         try:
             # Validation du nouveau mot de passe
             password_field = ResetPasswordSchema().fields['password']
-            password_field.validate(new_password)
+            password_field.deserialize(new_password)
         except ValidationError as err:
             return {'errors': err.messages}, 400
         user.set_password(new_password)
@@ -206,8 +206,8 @@ class UserService:
                 f"Votre code à usage unique est : {code}\n\n"
                 "Ce code est valable pendant 10 minutes."
             )
-            # Envoi asynchrone de l'email
-            Thread(target=mail.send, args=(msg,)).start()
+            # Envoi asynchrone de l'email avec contexte d'application
+            Thread(target=self.send_async_email, args=(msg,)).start()
             logging.info(f'One-time code envoyé à {email}')
         except Exception as e:
             logging.error(f'Erreur lors de l\'envoi du one-time code: {e}')
@@ -244,3 +244,7 @@ class UserService:
             'refresh_token': refresh_token,
             'message': 'Authentification réussie.'
         }, 200
+    
+    def send_async_email(self, msg):
+        with current_app.app_context():
+            mail.send(msg)

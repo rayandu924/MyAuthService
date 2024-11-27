@@ -1,3 +1,5 @@
+# app/schemas/user.py
+
 from marshmallow import Schema, fields, validate
 
 class RegisterSchema(Schema):

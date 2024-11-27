@@ -1,5 +1,6 @@
 # app/extensions.py
 
+import os
 from flask_jwt_extended import JWTManager
 from flask_bcrypt import Bcrypt
 from flask_limiter import Limiter
@@ -13,5 +14,5 @@ mail = Mail()
 # Configuration de Flask-Limiter avec storage_uri
 limiter = Limiter(
     key_func=get_remote_address,
-    storage_uri="redis://redis:6379/0"  # Assurez-vous que l'URL correspond à votre configuration Redis
+    storage_uri=os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 )

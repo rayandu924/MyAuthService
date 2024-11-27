@@ -6,9 +6,6 @@ from distutils.util import strtobool
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'vous-devriez-changer-cette-clé')
-
-    MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://root:example@mongodb:27017/auth_service_db?authSource=admin')
-
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'vous-devriez-changer-cette-clé-aussi')
 
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=int(os.environ.get('JWT_ACCESS_TOKEN_EXPIRES', 3600)))
@@ -22,11 +19,17 @@ class Config:
     SESSION_COOKIE_SAMESITE = 'Lax'
 
     # Configuration Redis
-    REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')
+    REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
     REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
     REDIS_DB = int(os.environ.get('REDIS_DB', 0))
-    REDIS_URL = f"redis://redis:6379/0"
+    REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', None)
     REDIS_DECODE_RESPONSES = True  # Pour obtenir des chaînes de caractères
+
+    # Construction de l'URL Redis
+    if REDIS_PASSWORD:
+        REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+    else:
+        REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 
     # Configuration Mail
     MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.example.com')
@@ -45,16 +48,27 @@ class Config:
     MAX_LOG_SIZE = int(os.environ.get('MAX_LOG_SIZE', 10 * 1024 * 1024))
     BACKUP_COUNT = int(os.environ.get('BACKUP_COUNT', 5))
 
+    # URI MongoDB avec uuidRepresentation pour éliminer le warning
+    MONGO_URI = os.environ.get(
+        'MONGO_URI',
+        'mongodb://root:example@localhost:27017/auth_service_db?authSource=admin&uuidRepresentation=standard'
+    )
+
 class DevelopmentConfig(Config):
     DEBUG = True
     SESSION_COOKIE_SECURE = False
 
 class ProductionConfig(Config):
     DEBUG = False
+    SESSION_COOKIE_SECURE = True
 
 class TestingConfig(Config):
     TESTING = True
-    # Utilisation de la même base de données pour les tests
-    MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://root:example@mongodb:27017/auth_service_db?authSource=admin')
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=1)  # Expiration rapide pour les tests
-    MAIL_SUPPRESS_SEND = True  # Ne pas envoyer d'emails pendant les tests
+    SESSION_COOKIE_SECURE = False
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=1)
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(seconds=30)  # Par exemple, 30 secondes pour les tests
+    MAIL_SUPPRESS_SEND = True
+    MONGO_URI = os.environ.get(
+        'MONGO_URI',
+        'mongodb://root:example@localhost:27017/test_auth_service_db?authSource=admin&uuidRepresentation=standard'
+    )

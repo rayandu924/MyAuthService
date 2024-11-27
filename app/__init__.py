@@ -6,19 +6,22 @@ import os
 import logging
 from werkzeug.exceptions import HTTPException
 
-from app.extensions import db, jwt, bcrypt, limiter, mail
+from app.extensions import jwt, bcrypt, limiter, mail
 from flask_cors import CORS
-import redis
 from logging.handlers import RotatingFileHandler
+
+from mongoengine import connect
+import redis
 
 def create_app(config_class=None):
     """
     Crée et configure l'application Flask.
-
-    :param config_class: La classe de configuration à utiliser.
-    :return: L'application Flask configurée.
     """
     app = Flask(__name__)
+
+    # Charger les variables d'environnement
+    from dotenv import load_dotenv
+    load_dotenv()
 
     # Configuration de CORS avec origines explicitement spécifiées
     CORS(app, resources={r"/*": {"origins": [os.environ.get('FRONTEND_URL', 'http://localhost:3000')]}},
@@ -50,33 +53,22 @@ def create_app(config_class=None):
     app.logger.addHandler(handler)
     app.logger.setLevel(log_level)
 
-    # Configuration de MongoEngine
-    app.config['MONGODB_SETTINGS'] = {
-        'host': app.config['MONGO_URI']
-    }
+    # Connexion à MongoDB avec mongoengine
+    connect(host=app.config['MONGO_URI'])
 
     # Initialisation des extensions
-    db.init_app(app)
     jwt.init_app(app)
     bcrypt.init_app(app)
     limiter.init_app(app)
     mail.init_app(app)
 
     # Initialisation du client Redis
-    try:
-        redis_client = redis.Redis(
-            host=app.config['REDIS_HOST'],
-            port=app.config['REDIS_PORT'],
-            db=app.config['REDIS_DB'],
-            decode_responses=True
-        )
-        redis_client.ping()
-        app.logger.info("Connexion à Redis réussie.")
-    except redis.RedisError as e:
-        app.logger.error(f"Erreur de connexion à Redis: {e}")
-        redis_client = None
-
-    # Stocker redis_client dans les extensions de l'application
+    redis_client = redis.Redis(
+        host=app.config['REDIS_HOST'],
+        port=app.config['REDIS_PORT'],
+        db=app.config['REDIS_DB'],
+        decode_responses=True  # Pour obtenir des chaînes de caractères
+    )
     app.redis_client = redis_client
 
     # Fonction pour vérifier si un token est révoqué

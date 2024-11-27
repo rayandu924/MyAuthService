@@ -6,14 +6,17 @@ from app.schemas.user import (
     RegisterSchema,
     LoginSchema,
     RequestPasswordResetSchema,
-    ResetPasswordSchema
+    ResetPasswordSchema,
+    RequestOneTimeCodeSchema,
+    VerifyOneTimeCodeSchema
 )
 from marshmallow import ValidationError
 from app.extensions import limiter
 from flask_jwt_extended import (
     jwt_required,
     get_jwt_identity,
-    create_access_token
+    create_access_token,
+    get_jwt
 )
 
 user_bp = Blueprint('user_bp', __name__)
@@ -98,6 +101,39 @@ def logout():
     Endpoint pour la déconnexion de l'utilisateur.
     Révoque le token d'accès courant.
     """
-    jti = get_jwt_identity()
-    user_service.revoke_token(jti)
+    jwt_data = get_jwt()
+    jti = jwt_data['jti']
+    token_type = jwt_data['type']
+    exp = jwt_data['exp']
+    user_id = get_jwt_identity()
+    user_service.revoke_token(jti, token_type, exp, user_id)
     return {'message': 'Déconnexion réussie.'}, 200
+
+@user_bp.route('/request_one_time_code', methods=['POST'])
+@limiter.limit("5 per minute")
+def request_one_time_code():
+    """
+    Endpoint pour demander un code à usage unique envoyé par email.
+    """
+    json_data = request.get_json()
+    try:
+        data = RequestOneTimeCodeSchema().load(json_data)
+    except ValidationError as err:
+        return {'errors': err.messages}, 400
+    email = data['email']
+    return user_service.request_one_time_code(email)
+
+@user_bp.route('/verify_one_time_code', methods=['POST'])
+@limiter.limit("10 per minute")
+def verify_one_time_code():
+    """
+    Endpoint pour vérifier le code à usage unique et authentifier l'utilisateur.
+    """
+    json_data = request.get_json()
+    try:
+        data = VerifyOneTimeCodeSchema().load(json_data)
+    except ValidationError as err:
+        return {'errors': err.messages}, 400
+    email = data['email']
+    code = data['code']
+    return user_service.verify_one_time_code(email, code)

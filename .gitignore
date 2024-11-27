@@ -1,2 +1,8 @@
 # Fichiers de l'environnement virtuel
-venv/
+.venv/
+
+# Fichiers temporaires
+tmp/
+*.log
+*.pyc
+*.pyc

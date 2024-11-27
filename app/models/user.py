@@ -1,9 +1,9 @@
 # app/models/user.py
 
-from app.extensions import db, bcrypt
-from mongoengine import Q
+from mongoengine import Document, StringField, EmailField, Q
+from app.extensions import bcrypt
 
-class User(db.Document):
+class User(Document):
     """
     Modèle représentant un utilisateur.
     """
@@ -15,9 +15,9 @@ class User(db.Document):
         ],
         'strict': True
     }
-    username = db.StringField(required=True, unique=True, max_length=50)
-    email = db.EmailField(required=True, unique=True)
-    password_hash = db.StringField(required=True)
+    username = StringField(required=True, unique=True, max_length=50)
+    email = EmailField(required=True, unique=True)
+    password_hash = StringField(required=True)
 
     def set_password(self, password: str) -> None:
         """

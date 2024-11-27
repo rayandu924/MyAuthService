@@ -46,8 +46,8 @@ pip install -r requirements.txt
 pip freeze > requirements.txt
 ```
 
-### Run Application
+### Run Application From Root Directory
 
 ```bash
-python app.py
+python -m app.server
 ```

@@ -1,23 +1,34 @@
 # Dockerfile
 
 # Étape 1 : Build des dépendances dans une image temporaire
-FROM python:3.9-slim-buster AS builder
+FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
-# Installer les dépendances Python
+# Installer les dépendances système nécessaires
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential libssl-dev libffi-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copier les fichiers de configuration
 COPY requirements.txt .
+
+# Créer un virtualenv
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Installer les dépendances Python
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Étape 2 : Construire l'image finale
-FROM python:3.9-slim-buster
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copier les dépendances Python depuis le builder
-COPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+# Copier le virtualenv depuis le builder
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Copier le reste de l'application
 COPY . .
@@ -27,8 +38,6 @@ RUN useradd -m appuser && chown -R appuser /app
 USER appuser
 
 # Variables d'environnement
-ENV FLASK_APP=app/server.py
-ENV FLASK_ENV=production
 ENV PYTHONUNBUFFERED=1
 
 # Exposer le port de l'application

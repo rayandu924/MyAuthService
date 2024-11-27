@@ -1,5 +1,3 @@
-# app/schemas/user.py
-
 from marshmallow import Schema, fields, validate
 
 class RegisterSchema(Schema):
@@ -41,5 +39,18 @@ class ResetPasswordSchema(Schema):
                 '^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&]).{8,}$',
                 error='Le mot de passe doit contenir au moins 8 caractères, dont des lettres, des chiffres et des caractères spéciaux.'
             )
+        ]
+    )
+
+class RequestOneTimeCodeSchema(Schema):
+    email = fields.Email(required=True)
+
+class VerifyOneTimeCodeSchema(Schema):
+    email = fields.Email(required=True)
+    code = fields.Str(
+        required=True,
+        validate=[
+            validate.Length(equal=6, error="Le code doit contenir exactement 6 chiffres."),
+            validate.Regexp('^\d{6}$', error="Le code doit contenir uniquement des chiffres.")
         ]
     )
